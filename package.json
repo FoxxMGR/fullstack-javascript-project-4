@@ -1,0 +1,37 @@
+{
+  "name": "@hexlet/code",
+  "version": "1.0.0",
+  "description": "project-4",
+  "homepage": "https://github.com/FoxxMGR/fullstack-javascript-project-4#readme",
+  "bugs": {
+    "url": "https://github.com/FoxxMGR/fullstack-javascript-project-4/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FoxxMGR/fullstack-javascript-project-4.git"
+  },
+  "license": "ISC",
+  "author": "Foxxmgr",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "page-loader": "bin/page-loader.js"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "commander": "^14.0.2",
+    "js-yaml": "^4.1.0",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@stylistic/eslint-plugin": "^5.5.0",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "jest": "^30.2.0"
+  }
+}
