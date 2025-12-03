@@ -1,45 +1,67 @@
 #!/usr/bin/env node
-
 import { Command } from 'commander'
-import { downloadPage } from '../src/page-loader.js'
-import { readFile } from 'fs/promises'
+import pageLoader from '../src/page-loger.js'
 
-const __dirname = new URL('.', import.meta.url).pathname
+const program = new Command()
 
-const readPackageJson = async () => {
-  try {
-    const packagePath = new URL('../package.json', import.meta.url)
-    const packageData = await readFile(packagePath, 'utf8')
-    return JSON.parse(packageData)
-  }
-  catch (error) {
-    return { version: '1.0.0' }
-  }
-}
+program
+  .description('Page loader utility')
+  .argument('<url>')
+  .option('-V, --version', 'output the version number')
+  .option('-o, --output [dir]', 'output dir', process.cwd())
+  .action((url) => {
+    pageLoader(url, program.opts().output)
+      // .then((filepath) => {
+      //   console.log(filepath)
+      // })
+      // .catch((error) => {
+      //   console.error(`Error: ${error.message}`)
+      //   process.exit(1)
+      // })
+  })
+program.parse()
+// #!/usr/bin/env node
 
-const main = async () => {
-  const packageData = await readPackageJson()
+// import { Command } from 'commander'
+// import { downloadPage } from '../src/page-loader.js'
+// import { readFile } from 'fs/promises'
 
-  const program = new Command()
+// const __dirname = new URL('.', import.meta.url).pathname
 
-  program
-    .name('page-loader')
-    .description('Page loader utility')
-    .version(packageData.version)
-    .argument('<url>', 'URL to download')
-    .option('-o, --output [dir]', 'output dir', process.cwd())
-    .action(async (url, options) => {
-      try {
-        const filepath = await downloadPage(url, options.output)
-        console.log(filepath)
-      }
-      catch (error) {
-        console.error(`Error: ${error.message}`)
-        process.exit(1)
-      }
-    })
+// const readPackageJson = async () => {
+//   try {
+//     const packagePath = new URL('../package.json', import.meta.url)
+//     const packageData = await readFile(packagePath, 'utf8')
+//     return JSON.parse(packageData)
+//   }
+//   catch (error) {
+//     return { version: '1.0.0' }
+//   }
+// }
 
-  program.parse()
-}
+// const main = async () => {
+//   const packageData = await readPackageJson()
 
-main().catch(console.error)
+//   const program = new Command()
+
+//   program
+//     .name('page-loader')
+//     .description('Page loader utility')
+//     .version(packageData.version)
+//     .argument('<url>', 'URL to download')
+//     .option('-o, --output [dir]', 'output dir', process.cwd())
+// .action(async (url, options) => {
+//   try {
+//     const filepath = await downloadPage(url, options.output)
+//     console.log(filepath)
+//   }
+//   catch (error) {
+//     console.error(`Error: ${error.message}`)
+//     process.exit(1)
+//   }
+//     })
+
+//   program.parse()
+// }
+
+// main().catch(console.error)
