@@ -1,18 +1,23 @@
 import axios from 'axios'
 import fs from 'fs/promises'
 import path from 'path'
-import { fileURLToPath, URLSearchParams } from 'url'
-import { generateFilename } from './utils.js'
+// import { fileURLToPath, URLSearchParams } from 'url'
+import { generateName } from './utils.js'
 
 const pageLoader = (url, outputDir) => {
-  const filename = generateFilename(url)
+  const filename = generateName(url, '.html')
+  const dirname = generateName(url, '_files')
   // console.log(filename)
   const filepath = path.resolve(outputDir, filename)
+  const dirpath = path.resolve(outputDir, dirname)
   const html = axios.get(url)
     .then((respons) => respons.data)
     // .then((data) => console.log(data))
     .then((data) => fs.writeFile(filepath, data))
+    .then(() => fs.mkdir(dirpath))
+    .then()
     .then(() => console.log(filepath))
+
   return html
 }
 

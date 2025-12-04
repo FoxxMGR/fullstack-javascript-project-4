@@ -1,7 +1,7 @@
-const generateFilename = (url) => {
+const generateName = (url, type) => {
   const urlWithoutProtocol = url.replace(/^https?:\/\//, '')
   const filename = urlWithoutProtocol.replace(/[^a-zA-Z0-9]/g, '-')
-  return `${filename}.html`
+  return `${filename}${type}`
 }
 
-export { generateFilename }
+export { generateName }
