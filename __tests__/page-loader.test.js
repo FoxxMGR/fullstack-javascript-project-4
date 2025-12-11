@@ -19,13 +19,54 @@ beforeEach(async () => {
 })
 
 test('log', async () => {
-  const fixturePath = getFixturePath('downloaded.html')
-  const downloadedHtml = await fs.promises.readFile(fixturePath, 'utf-8')
+  // Пути к предполагаемым фикстурам
+  const htmlFixturePath = getFixturePath('downloaded.html') // Основной HTML
+  const cssFixturePath = getFixturePath('application.css') // CSS файл
+  const scriptFixturePath = getFixturePath('runtime.js') // JavaScript файл
+  const imageFixturePath = getFixturePath('logo.png') // Изображение
+
+  // Читаем фикстуры
+  const htmlFixture = await fs.promises.readFile(htmlFixturePath, 'utf-8')
+  const cssFixture = await fs.promises.readFile(cssFixturePath, 'utf-8')
+  const scriptFixture = await fs.promises.readFile(scriptFixturePath, 'utf-8')
+  const imageFixture = await fs.promises.readFile(imageFixturePath)
+
+  // 1. Перехватываем запрос к основной странице
   nock('https://ru.hexlet.io')
     .get('/courses')
-    .reply(200, downloadedHtml)
-  console.log(downloadedHtml)
+    .reply(200, htmlFixture)
+    .get('/assets/application.css')
+    .reply(200, cssFixture, {
+      'Content-Type': 'text/css', // Указываем правильный Content-Type
+    })
+    .get('/packs/js/runtime.js')
+    .reply(200, scriptFixture, {
+      'Content-Type': 'application/javascript',
+    })
+    .get('/assets/professions/nodejs.png')
+    .reply(200, imageFixture, {
+      'Content-Type': 'image/png',
+    })
+  // 2. Перехватываем запрос к CSS файлу (предполагаемый путь: /assets/application.css)
+  // nock('https://ru.hexlet.io')
+  //   .get('/assets/application.css')
+  //   .reply(200, cssFixture, {
+  //     'Content-Type': 'text/css', // Указываем правильный Content-Type
+  //   })
 
+  // 3. Перехватываем запрос к JavaScript файлу (предполагаемый путь: /assets/professions/runtime.js)
+  // nock('https://ru.hexlet.io')
+  // .get('/packs/js/runtime.js')
+  // .reply(200, scriptFixture, {
+  //   'Content-Type': 'application/javascript',
+  // })
+
+  // 4. Перехватываем запрос к изображению (предполагаемый путь: /assets/professions/nodejs.png)
+  // nock('https://ru.hexlet.io')
+  //   .get('/assets/professions/nodejs.png')
+  //   .reply(200, imageFixture, {
+  //     'Content-Type': 'image/png',
+  //   })
   // С помощью программы пагелоадер скачиваем файл  и сохраняем в какую то папку
 
   await pageLoader('https://ru.hexlet.io/courses', pathTmp)
@@ -37,6 +78,41 @@ test('log', async () => {
   const expectedHtmlPath = getFixturePath('expected.html')
   const expectedHtml = await fs.promises.readFile(expectedHtmlPath, 'utf-8')
 
-  // Подставляем в сравнение файл
   expect(expectedHtml).toEqual(pageLoaderHtml)
+
+  const expectedCssFixturePath = getFixturePath('application.css')
+  const expectedCss = await fs.promises.readFile(expectedCssFixturePath, 'utf-8')
+
+  const expectedJsFixturePath = getFixturePath('runtime.js')
+  const expectedJs = await fs.promises.readFile(expectedJsFixturePath, 'utf-8')
+
+  const expectedImgFixturePath = getFixturePath('logo.png')
+  const expectedImg = await fs.promises.readFile(expectedImgFixturePath)
+
+  const downloadedCssPath = path.resolve(
+    pathTmp,
+    'ru-hexlet-io-courses_files',
+    'ru-hexlet-io-assets-application.css',
+  )
+  const downloadedCss = await fs.promises.readFile(downloadedCssPath, 'utf-8')
+  expect(downloadedCss).toEqual(expectedCss)
+
+  const downloadedJsPath = path.resolve(
+    pathTmp,
+    'ru-hexlet-io-courses_files',
+    'ru-hexlet-io-packs-js-runtime.js',
+  )
+  const downloadedJs = await fs.promises.readFile(downloadedJsPath, 'utf-8')
+  expect(downloadedJs).toEqual(expectedJs)
+
+  const downloadedImgPath = path.resolve(
+    pathTmp,
+    'ru-hexlet-io-courses_files',
+    'ru-hexlet-io-assets-professions-nodejs.png',
+  )
+  const downloadedImg = await fs.promises.readFile(downloadedImgPath)
+  expect(downloadedImg).toEqual(expectedImg)
+
+  // Подставляем в сравнение файл
+  // expect(expectedHtml).toEqual(pageLoaderHtml)
 })
