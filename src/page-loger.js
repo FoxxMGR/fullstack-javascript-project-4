@@ -101,6 +101,10 @@ import path from 'path'
 import { URL } from 'url'
 import * as cheerio from 'cheerio'
 import { generateName } from './utils.js'
+import 'axios-debug-log'
+import debug from 'debug'
+
+const log = debug('page-loader');
 
 const downloadResource = (url, filepath) => {
   return axios({
@@ -112,7 +116,8 @@ const downloadResource = (url, filepath) => {
       return fs.writeFile(filepath, response.data)
     })
     .catch((error) => {
-      console.warn(`Не удалось скачать ресурс ${url}:`, error.message)
+      // console.warn(`Не удалось скачать ресурс ${url}:`, error.message)
+      log(url)
       throw error
     })
 }
@@ -122,7 +127,8 @@ const isLocalResource = (resourceUrl, pageUrl) => {
     const pageOrigin = new URL(pageUrl).origin
     const resourceOrigin = new URL(resourceUrl, pageUrl).origin
     return resourceOrigin === pageOrigin
-  } catch (error) {
+  }
+  catch (error) {
     return false
   }
 }
@@ -131,16 +137,16 @@ const getResourceFilename = (resourceUrl, pageUrl) => {
   try {
     const absoluteUrl = new URL(resourceUrl, pageUrl).toString()
     const parsedUrl = new URL(absoluteUrl)
-    
+
     // Получаем расширение из пути
     const extension = path.extname(parsedUrl.pathname)
-    
+
     // Генерируем базовое имя (без расширения)
     const baseName = generateName(absoluteUrl, '')
-    
+
     // Определяем окончательное расширение
     let finalExtension = extension
-    
+
     // Если расширения нет в пути, определяем по типу контента
     if (!finalExtension) {
       // Для CSS ссылок (даже без .css в пути)
@@ -156,12 +162,13 @@ const getResourceFilename = (resourceUrl, pageUrl) => {
         finalExtension = '.html'
       }
     }
-    
+
     return {
       url: absoluteUrl,
-      filename: baseName + finalExtension
+      filename: baseName + finalExtension,
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.warn(`Не удалось обработать URL ${resourceUrl}:`, error.message)
     return null
   }
@@ -172,7 +179,7 @@ const pageLoader = (url, outputDir) => {
   const dirname = generateName(url, '_files')
   const filepath = path.resolve(outputDir, filename)
   const dirpath = path.resolve(outputDir, dirname)
-  
+
   let $
 
   return axios.get(url)
@@ -183,37 +190,38 @@ const pageLoader = (url, outputDir) => {
     })
     .then(() => {
       const downloadPromises = []
-      
+
       // Обработка тегов img
       $('img').each((i, element) => {
         const src = $(element).attr('src')
         if (!src) return
-        
+
         const resourceInfo = getResourceFilename(src, url)
         if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
-        
+
         const filepath = path.join(dirpath, resourceInfo.filename)
         const relativePath = path.join(dirname, resourceInfo.filename)
-        
+
         $(element).attr('src', relativePath)
+        log(`Список на скачивание `, resourceInfo)
         downloadPromises.push(downloadResource(resourceInfo.url, filepath))
       })
-      
+
       // Обработка тегов link
       $('link').each((i, element) => {
         const href = $(element).attr('href')
         const rel = $(element).attr('rel')
-        
+
         if (!href) return
-        
+
         // Для канонических ссылок используем .html расширение
         if (rel === 'canonical') {
           const resourceInfo = getResourceFilename(href, url)
           if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
-          
+
           const filepath = path.join(dirpath, resourceInfo.filename)
           const relativePath = path.join(dirname, resourceInfo.filename)
-          
+
           $(element).attr('href', relativePath)
           downloadPromises.push(downloadResource(resourceInfo.url, filepath))
         }
@@ -221,41 +229,48 @@ const pageLoader = (url, outputDir) => {
         else if (rel === 'stylesheet' || href.includes('.css')) {
           const resourceInfo = getResourceFilename(href, url)
           if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
-          
+
           const filepath = path.join(dirpath, resourceInfo.filename)
           const relativePath = path.join(dirname, resourceInfo.filename)
-          
+
           $(element).attr('href', relativePath)
+          log(`Список на скачивание `, resourceInfo)
           downloadPromises.push(downloadResource(resourceInfo.url, filepath))
         }
       })
-      
+
       // Обработка тегов script
       $('script').each((i, element) => {
         const src = $(element).attr('src')
         if (!src) return
-        
+
         const resourceInfo = getResourceFilename(src, url)
         if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
-        
+
         const filepath = path.join(dirpath, resourceInfo.filename)
         const relativePath = path.join(dirname, resourceInfo.filename)
-        
+
         $(element).attr('src', relativePath)
+        log(`Список на скачивание `, resourceInfo)
         downloadPromises.push(downloadResource(resourceInfo.url, filepath))
       })
+
+      // console.log(`Найдено ${downloadPromises.length} локальных ресурсов для скачивания`)
       
-      console.log(`Найдено ${downloadPromises.length} локальных ресурсов для скачивания`)
       return Promise.allSettled(downloadPromises)
     })
     .then((results) => {
       // Логирование результатов скачивания
+      log('список ресурсов', results)
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
-          console.warn(`Ресурс ${index} не удалось скачать:`, result.reason.message)
+          // console.warn(`Ресурс ${index} не удалось скачать:`, result.reason.message)
+          log(`Ресурс ${index} не удалось скачать:`, result.request)
+          log(`Ресурс ${index} не удалось скачать:`, result.reason.message)
+          log(`Ресурс ${index} не удалось скачать:`, result.reason.message)
         }
       })
-      
+
       const modifiedHtml = $.html()
       return fs.writeFile(filepath, modifiedHtml)
     })

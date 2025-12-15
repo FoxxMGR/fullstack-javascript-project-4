@@ -5,18 +5,18 @@
 // }
 
 // export { generateName }
-import path from 'path';
+import path from 'path'
 
 export const generateName = (url, suffix = '') => {
   try {
     const parsedUrl = new URL(url)
-    
+
     // Получаем путь без расширения
     let pathname = parsedUrl.pathname
-    
+
     // Удаляем расширение файла из пути (если есть)
-    const extension = path.extname(pathname) 
-    
+    const extension = path.extname(pathname)
+
     if (extension) {
       pathname = pathname.slice(0, -extension.length)
     }
