@@ -5,7 +5,7 @@ import os from 'os'
 // import axios from 'axios'
 // import httpAdapter from 'axios/lib/adapters/http'
 import pageLoader from '../src/page-loger.js'
-import { expect, test } from '@jest/globals'
+import { expect, test, beforeEach } from '@jest/globals'
 
 nock.disableNetConnect()
 // axios.defaults.adapter = httpAdapter

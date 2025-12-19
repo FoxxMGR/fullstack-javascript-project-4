@@ -519,12 +519,12 @@ const pageLoader = (url, outputDir) => {
         }
       })
 
-      if (downloadErrors.length > 0) {
-        const errorMessage = downloadErrors
-          .map((err, idx) => `${idx + 1}. ${err.url}: ${err.error}`)
-          .join('\n')
-        // throw new Error(`Не удалось скачать некоторые ресурсы:\n${errorMessage}`)
-      }
+      // if (downloadErrors.length > 0) {
+      //   const errorMessage = downloadErrors
+      //     .map((err, idx) => `${idx + 1}. ${err.url}: ${err.error}`)
+      //     .join('\n')
+      //   // throw new Error(`Не удалось скачать некоторые ресурсы:\n${errorMessage}`)
+      // }
 
       return { dirpath }
     })
