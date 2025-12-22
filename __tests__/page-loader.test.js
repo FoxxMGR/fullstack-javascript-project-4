@@ -2,13 +2,12 @@ import fs from 'fs'
 import path from 'path'
 import nock from 'nock'
 import os from 'os'
-// import axios from 'axios'
-// import httpAdapter from 'axios/lib/adapters/http'
+
 import pageLoader from '../src/page-loger.js'
 import { expect, test, beforeEach } from '@jest/globals'
 
 nock.disableNetConnect()
-// axios.defaults.adapter = httpAdapter
+
 
 const getFixturePath = filename => path.resolve('./__fixtures__/', filename)
 
@@ -47,27 +46,7 @@ test('log', async () => {
     .reply(200, imageFixture, {
       'Content-Type': 'image/png',
     })
-  // 2. Перехватываем запрос к CSS файлу (предполагаемый путь: /assets/application.css)
-  // nock('https://ru.hexlet.io')
-  //   .get('/assets/application.css')
-  //   .reply(200, cssFixture, {
-  //     'Content-Type': 'text/css', // Указываем правильный Content-Type
-  //   })
 
-  // 3. Перехватываем запрос к JavaScript файлу (предполагаемый путь: /assets/professions/runtime.js)
-  // nock('https://ru.hexlet.io')
-  // .get('/packs/js/runtime.js')
-  // .reply(200, scriptFixture, {
-  //   'Content-Type': 'application/javascript',
-  // })
-
-  // 4. Перехватываем запрос к изображению (предполагаемый путь: /assets/professions/nodejs.png)
-  // nock('https://ru.hexlet.io')
-  //   .get('/assets/professions/nodejs.png')
-  //   .reply(200, imageFixture, {
-  //     'Content-Type': 'image/png',
-  //   })
-  // С помощью программы пагелоадер скачиваем файл  и сохраняем в какую то папку
 
   await pageLoader('https://ru.hexlet.io/courses', pathTmp)
 
@@ -113,6 +92,5 @@ test('log', async () => {
   const downloadedImg = await fs.promises.readFile(downloadedImgPath)
   expect(downloadedImg).toEqual(expectedImg)
 
-  // Подставляем в сравнение файл
-  // expect(expectedHtml).toEqual(pageLoaderHtml)
+
 })

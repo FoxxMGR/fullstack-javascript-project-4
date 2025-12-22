@@ -12,3 +12,7 @@ test-coverage:
 	npm test -- --coverage
 test-watch:
 	npm test -- --watch
+debug:
+	DEBUG=page-loader npm test
+d:
+	DEBUG=nock npm test
