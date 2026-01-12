@@ -1,12 +1,15 @@
 
 
-import axios from 'axios'
+// import axios from 'axios'
 import fs from 'fs/promises'
 import path from 'path'
 import { URL } from 'url'
 import * as cheerio from 'cheerio'
 import { generateName } from './utils.js'
-import 'axios-debug-log'
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+require('axios-debug-log');
+const axios = require('axios');
 import debug from 'debug'
 import Listr from 'listr'
 

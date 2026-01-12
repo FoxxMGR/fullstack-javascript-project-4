@@ -15,4 +15,4 @@ test-watch:
 debug:
 	DEBUG=page-loader npm test
 d:
-	DEBUG=nock npm test
+	DEBUG=axios npm test
