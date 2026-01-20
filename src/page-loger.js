@@ -26,7 +26,7 @@ const dirName = `${partName}_files`
 log('название файла', filename)
   log('ссылка для скачивания', url)
   log('папка для скачивания', outputDir)
-return fsp.mkdir(`${outputDir}${dirName}`)
+return fsp.mkdir(`${outputDir}/${dirName}`)
   .then(()=>{
   return axios.get(url)
   })
@@ -42,11 +42,12 @@ return fsp.mkdir(`${outputDir}${dirName}`)
   .then((html) => {
     const $ = cheerio.load(html)
     log('часть пути к картинке', $('img').attr('src'))
+    log('путь к картинке', `${parseUrl.origin}${$('img').attr('src')}`)
     return axios.get(`${parseUrl.origin}${$('img').attr('src')}`, { responseType: 'arraybuffer' })
            
   })
   .then(img => {
-    log('содержание img', img)
+    log('содержание img', img.data)
 fsp.writeFile(`${outputDir}/${dirName}/img` , img.data)
   })
 
