@@ -53,7 +53,7 @@ test('log', async () => {
   // Читаем файл из этой папки, тот файл который мы скачали.
   const pageLoaderHtmlPath = path.resolve(pathTmp, 'ru-hexlet-io-courses.html')
   const pageLoaderHtml = await fs.promises.readFile(pageLoaderHtmlPath, 'utf-8')
-
+  
   const expectedHtmlPath = getFixturePath('expected.html')
   const expectedHtml = await fs.promises.readFile(expectedHtmlPath, 'utf-8')
 
