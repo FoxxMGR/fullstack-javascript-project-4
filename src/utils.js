@@ -1,44 +1,89 @@
-// const generateName = (url, type) => {
-//   const urlWithoutProtocol = url.replace(/^https?:\/\//, '')
-//   const filename = urlWithoutProtocol.replace(/[^a-zA-Z0-9]/g, '-')
-//   return `${filename}${type}`
-// }
+import path from 'path'
+import { URL } from 'url'
+import debug from 'debug'
 
-// // export { generateName }
-// import path from 'path'
+const log = debug('page-loader:utils')
 
-// export const generateName = (url, suffix = '') => {
-//   try {
-//     const parsedUrl = new URL(url)
+/**
+ * Создает имя файла для ресурса как в тестах
+ */
+export const createResourceName = (resourceUrl, baseUrl) => {
+  try {
+    const absoluteUrl = new URL(resourceUrl, baseUrl)
+    const parsed = path.parse(absoluteUrl.pathname)
 
-//     // Получаем путь без расширения
-//     let pathname = parsedUrl.pathname
+    // Берем host из baseUrl и заменяем точки на дефисы
+    const host = new URL(baseUrl).hostname.replace(/[^a-zA-Z0-9]/g, '-')
 
-//     // Удаляем расширение файла из пути (если есть)
-//     const extension = path.extname(pathname)
+    // Берем dir без начального слэша
+    let dirPart = ''
+    if (parsed.dir && parsed.dir !== '/') {
+      dirPart = parsed.dir
+        .slice(1) // Убираем начальный /
+        .replace(/\//g, '-') + '-'
+    }
 
-//     if (extension) {
-//       pathname = pathname.slice(0, -extension.length)
-//     }
+    // name и ext уже есть в parsed
+    const name = parsed.name || 'resource'
+    const ext = parsed.ext || (() => {
+      // Если нет расширения, пытаемся определить
+      const lowerUrl = resourceUrl.toLowerCase()
+      if (lowerUrl.includes('.css')) return '.css'
+      if (lowerUrl.includes('.js')) return '.js'
+      if (lowerUrl.includes('.png')) return '.png'
+      if (lowerUrl.includes('.jpg') || lowerUrl.includes('.jpeg')) return '.jpg'
+      return '.html'
+    })()
 
-//     // Объединяем hostname и pathname
-//     let name = parsedUrl.hostname + pathname
+    return `${host}-${dirPart}${name}${ext}`
+  }
+  catch (error) {
+    log(`Ошибка создания имени для ${resourceUrl}:`, error.message)
+    return `resource-${Date.now()}.bin`
+  }
+}
 
-//     // Удаляем начальный и конечный слэши
-//     name = name.replace(/^\/+|\/+$/g, '')
+/**
+ * Генерирует имя для основного HTML файла
+ */
+export const generateName = (url, suffix) => {
+  const parsedUrl = new URL(url)
+  const host = parsedUrl.hostname.replace(/[^a-zA-Z0-9]/g, '-')
+  const urlPath = parsedUrl.pathname === '/'
+    ? ''
+    : parsedUrl.pathname.replace(/[^a-zA-Z0-9]/g, '-')
+  return `${host}${urlPath}${suffix}`
+}
 
-//     // Заменяем все не-буквенно-цифровые символы на дефисы
-//     name = name.replace(/[^a-zA-Z0-9]/g, '-')
+/**
+ * Проверяет, является ли ресурс локальным
+ */
+export const isLocalResource = (resourceUrl, pageUrl) => {
+  try {
+    const pageOrigin = new URL(pageUrl).origin
+    const resourceOrigin = new URL(resourceUrl, pageUrl).origin
+    return resourceOrigin === pageOrigin
+  }
+  catch {
+    return false
+  }
+}
 
-//     // Убираем множественные дефисы
-//     name = name.replace(/-+/g, '-')
+/**
+ * Получает имя файла для ресурса
+ */
+export const getResourceFilename = (resourceUrl, pageUrl) => {
+  try {
+    const absoluteUrl = new URL(resourceUrl, pageUrl).toString()
+    const filename = createResourceName(resourceUrl, pageUrl)
 
-//     // Убираем дефисы в начале и конце
-//     name = name.replace(/^-+|-+$/g, '')
-
-//     return name + suffix
-//   }
-//   catch (error) {
-//     throw new Error(`Invalid URL: ${error}`)
-//   }
-// }
+    return {
+      url: absoluteUrl,
+      filename,
+    }
+  }
+  catch (error) {
+    log(`Не удалось обработать URL ${resourceUrl}:`, error.message)
+    return null
+  }
+}
