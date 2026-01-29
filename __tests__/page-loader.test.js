@@ -34,14 +34,21 @@ test('log', async () => {
   nock('https://ru.hexlet.io')
     .get('/courses')
     .reply(200, htmlFixture)
+    .get('/courses') // Второй запрос - каноническая ссылка
+    .reply(200, htmlFixture, {
+      'Content-Type': 'text/html',
+    })
+
     .get('/assets/application.css')
     .reply(200, cssFixture, {
       'Content-Type': 'text/css', // Указываем правильный Content-Type
     })
+
     .get('/packs/js/runtime.js')
     .reply(200, scriptFixture, {
       'Content-Type': 'application/javascript',
     })
+
     .get('/assets/professions/nodejs.png')
     .reply(200, imageFixture, {
       'Content-Type': 'image/png',

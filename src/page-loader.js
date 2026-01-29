@@ -2,6 +2,7 @@ import fsp from 'fs/promises'
 import path from 'path'
 import { URL } from 'url'
 import axios from 'axios'
+import Listr from 'listr'
 import debug from 'debug'
 
 import * as utils from './utils.js'
@@ -11,7 +12,7 @@ import * as htmlProcessor from './html-processor.js'
 const log = debug('page-loader')
 
 /**
- * Основная функция pageLoader
+ * Основная функция pageLoader с Listr
  */
 const pageLoader = (url, outputDir) => {
   const parseUrl = new URL(url)
@@ -28,73 +29,154 @@ const pageLoader = (url, outputDir) => {
   log('ссылка для скачивания', url)
   log('папка для скачивания', outputDir)
 
-  return fsp.mkdir(dirpath, { recursive: true })
-    .then(() => {
-      log('Директория создана:', dirpath)
-      return axios.get(url)
-    })
-    .then((response) => {
-      log('Получен HTML страницы')
-      return htmlProcessor.processHtml(response.data, url, {
-        getResourceFilename: utils.getResourceFilename,
-        isLocalResource: utils.isLocalResource,
-      })
-    })
-    .then(({ $, resources, canonicalLinks }) => {
-      if (resources.length === 0) {
-        log('Нет локальных ресурсов для скачивания')
-        const html = $.html()
-        return fsp.writeFile(filepath, html)
-          .then(() => ({
-            htmlFile: filepath,
-            resourcesDir: dirpath,
-            message: 'Нет локальных ресурсов для загрузки',
-            resources: [],
-          }))
+  // Создаем задачи Listr
+  const tasks = new Listr([
+    {
+      title: 'Подготовка структуры',
+      task: () => fsp.mkdir(dirpath, { recursive: true })
+        .then(() => {
+          log('Директория создана:', dirpath)
+        }),
+    },
+    {
+      title: 'Загрузка страницы',
+      task: ctx => axios.get(url)
+        .then((response) => {
+          log('Получен HTML страницы')
+          ctx.response = response
+        }),
+    },
+    {
+      title: 'Анализ HTML',
+      task: (ctx) => {
+        // processHtml возвращает ОБЪЕКТ, не Promise!
+        const result = htmlProcessor.processHtml(
+          ctx.response.data,
+          url,
+          {
+            getResourceFilename: utils.getResourceFilename,
+            isLocalResource: utils.isLocalResource,
+          },
+        )
+
+        ctx.processed = result
+
+        // Возвращаем строку для обновления заголовка
+        return `Найдено ${result.resources.length} ресурсов`
+      },
+    },
+    {
+      title: 'Обработка ресурсов',
+      task: (ctx, task) => {
+        // Если нет ресурсов, сразу сохраняем HTML и завершаем
+        if (ctx.processed.resources.length === 0) {
+          log('Нет локальных ресурсов для скачивания')
+          const html = ctx.processed.$.html()
+          ctx.skipDownload = true
+          ctx.finalHtml = html
+          task.title = 'Нет ресурсов для загрузки'
+          return
+        }
+
+        log(`Найдено ${ctx.processed.resources.length} локальных ресурсов для скачивания`)
+
+        // Подготавливаем ресурсы для скачивания
+        ctx.resourcesToDownload = ctx.processed.resources.map(resource => ({
+          url: resource.url,
+          filepath: path.join(dirpath, resource.filename),
+          resource,
+          filename: resource.filename,
+        }))
+
+        task.title = `Подготовка ${ctx.processed.resources.length} ресурсов`
+      },
+    },
+    {
+      title: 'Скачивание ресурсов',
+      enabled: ctx => !ctx.skipDownload,
+      task: (ctx, task) => downloader.downloadResources(ctx.resourcesToDownload)
+        .then((downloadResults) => {
+          ctx.downloadResults = downloadResults
+
+          // Динамически обновляем заголовок с результатами
+          const successCount = downloadResults.successfulCount
+          const total = downloadResults.total
+          const failedCount = downloadResults.failedCount
+
+          if (failedCount > 0) {
+            task.title = `Скачано: ${successCount}/${total} (ошибок: ${failedCount})`
+          }
+          else {
+            task.title = `Скачано: ${successCount}/${total}`
+          }
+
+          log(`Ресурсы загружены: успешно ${successCount}, с ошибками ${failedCount}`)
+        }),
+    },
+    {
+      title: 'Обновление HTML',
+      task: (ctx) => {
+        if (ctx.skipDownload) {
+          // Если не было скачивания, используем уже подготовленный HTML
+          ctx.updatedHtml = ctx.finalHtml
+          return
+        }
+
+        // Обновляем HTML с локальными путями
+        ctx.updatedHtml = htmlProcessor.updateHtmlWithLocalPaths(
+          ctx.processed.$,
+          ctx.processed.resources,
+          dirname,
+        )
+      },
+    },
+    {
+      title: 'Сохранение файлов',
+      task: ctx => fsp.writeFile(filepath, ctx.updatedHtml)
+        .then(() => {
+          log(`Страница сохранена в: ${filepath}`)
+        }),
+    },
+  ], {
+    concurrent: false, // Задачи выполняются последовательно
+    exitOnError: true, // Прервать выполнение при ошибке
+    renderer: 'default', // Изменено на 'default' чтобы не было лишних console.log
+  })
+
+  // Запускаем задачи и возвращаем результат
+  return tasks.run()
+    .then((ctx) => {
+      // Формируем финальный результат
+      const result = {
+        htmlFile: filepath,
+        resourcesDir: dirpath,
+        resources: ctx.processed?.resources?.map(r => ({
+          type: r.type,
+          originalUrl: r.originalUrl,
+          filename: r.filename,
+          url: r.url,
+        })) || [],
       }
 
-      log(`Найдено ${resources.length} локальных ресурсов для скачивания`)
+      // Добавляем информацию о скачивании, если оно было
+      if (ctx.downloadResults) {
+        result.downloads = ctx.downloadResults
+        result.summary = {
+          total: ctx.downloadResults.total,
+          successful: ctx.downloadResults.successfulCount,
+          failed: ctx.downloadResults.failedCount,
+        }
+      }
+      else if (ctx.skipDownload) {
+        result.message = 'Нет локальных ресурсов для загрузки'
+        result.summary = {
+          total: 0,
+          successful: 0,
+          failed: 0,
+        }
+      }
 
-      // Подготавливаем ресурсы для скачивания
-      const resourcesToDownload = resources.map(resource => ({
-        url: resource.url,
-        filepath: path.join(dirpath, resource.filename),
-        resource,
-        filename: resource.filename, // Добавляем filename для удобства
-      }))
-
-      // Скачиваем все ресурсы
-      return downloader.downloadResources(resourcesToDownload)
-        .then((downloadResults) => {
-          log(`Ресурсы загружены: успешно ${downloadResults.successfulCount}, с ошибками ${downloadResults.failedCount}`)
-
-          // Обновляем HTML с локальными путями
-          const updatedHtml = htmlProcessor.updateHtmlWithLocalPaths(
-            $,
-            resources,
-            canonicalLinks,
-            dirname,
-          )
-
-          // Сохраняем обновленный HTML
-          return fsp.writeFile(filepath, updatedHtml)
-            .then(() => ({
-              htmlFile: filepath,
-              resourcesDir: dirpath,
-              resources: resources.map(r => ({
-                type: r.type,
-                originalUrl: r.originalUrl,
-                filename: r.filename,
-                url: r.url,
-              })),
-              downloads: downloadResults,
-              summary: {
-                total: downloadResults.total,
-                successful: downloadResults.successfulCount,
-                failed: downloadResults.failedCount,
-              },
-            }))
-        })
+      return result
     })
     .catch((error) => {
       log('Ошибка при загрузке страницы:', error)

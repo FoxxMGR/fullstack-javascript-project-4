@@ -12,7 +12,6 @@ export const collectResources = ($, url, {
   isLocalResource,
 }) => {
   const resources = []
-  const canonicalLinks = []
 
   // Обработка тегов img
   $('img').each((i, element) => {
@@ -32,39 +31,34 @@ export const collectResources = ($, url, {
     })
   })
 
-  // Обработка тегов link
+  // Обработка тегов link (включая canonical и stylesheet)
   $('link').each((i, element) => {
     const href = $(element).attr('href')
     const rel = $(element).attr('rel')
 
     if (!href) return
 
-    if (rel === 'canonical') {
-      const resourceInfo = getResourceFilename(href, url)
-      if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
+    // Обрабатываем ВСЕ локальные ссылки: canonical, stylesheet, и другие
+    const resourceInfo = getResourceFilename(href, url)
+    if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
 
-      canonicalLinks.push({
-        element,
-        originalUrl: href,
-        url: resourceInfo.url,
-        filename: resourceInfo.filename,
-        type: 'canonical',
-        attribute: 'href',
-      })
+    // Определяем тип ресурса
+    let type = 'link'
+    if (rel === 'canonical') {
+      type = 'canonical'
     }
     else if (rel === 'stylesheet' || href.includes('.css')) {
-      const resourceInfo = getResourceFilename(href, url)
-      if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
-
-      resources.push({
-        element,
-        originalUrl: href,
-        url: resourceInfo.url,
-        filename: resourceInfo.filename,
-        type: 'css',
-        attribute: 'href',
-      })
+      type = 'css'
     }
+
+    resources.push({
+      element,
+      originalUrl: href,
+      url: resourceInfo.url,
+      filename: resourceInfo.filename,
+      type,
+      attribute: 'href',
+    })
   })
 
   // Обработка тегов script
@@ -85,23 +79,17 @@ export const collectResources = ($, url, {
     })
   })
 
-  return { resources, canonicalLinks }
+  return { resources }
 }
 
 /**
  * Обновляет HTML с локальными путями
  */
-export const updateHtmlWithLocalPaths = ($, resources, canonicalLinks, dirname) => {
-  // Обновляем обычные ресурсы
+export const updateHtmlWithLocalPaths = ($, resources, dirname) => {
+  // Обновляем ВСЕ ресурсы одинаково
   resources.forEach((resource) => {
     const relativePath = path.join(dirname, resource.filename)
     $(resource.element).attr(resource.attribute, relativePath)
-  })
-
-  // Обновляем канонические ссылки
-  canonicalLinks.forEach((link) => {
-    const relativePath = path.join(dirname, link.filename)
-    $(link.element).attr(link.attribute, relativePath)
   })
 
   return $.html()
@@ -112,14 +100,13 @@ export const updateHtmlWithLocalPaths = ($, resources, canonicalLinks, dirname) 
  */
 export const processHtml = (html, url, utils) => {
   const $ = cheerio.load(html)
-  const { resources, canonicalLinks } = collectResources($, url, utils)
+  const { resources } = collectResources($, url, utils)
 
-  log(`Найдено ${resources.length} локальных ресурсов и ${canonicalLinks.length} канонических ссылок`)
+  log(`Найдено ${resources.length} локальных ресурсов`)
 
   return {
     $,
     resources,
-    canonicalLinks,
     originalHtml: html,
   }
 }
