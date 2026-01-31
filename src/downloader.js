@@ -12,7 +12,6 @@ export const downloadResource = (url, filepath) => {
     method: 'get',
     url,
     responseType: 'arraybuffer',
-    validateStatus: status => status === 200,
   })
     .then((response) => {
       return fsp.writeFile(filepath, response.data)
@@ -23,13 +22,24 @@ export const downloadResource = (url, filepath) => {
     })
     .catch((error) => {
       if (error.response) {
-        throw new Error(`Не удалось скачать ресурс ${url}: HTTP ${error.response.status} ${error.response.statusText}`)
+        // HTTP ошибка (404, 500 и т.д.)
+        throw new Error(`Failed to load resource ${url}: HTTP ${error.response.status} ${error.response.statusText}`)
       }
       else if (error.request) {
-        throw new Error(`Не удалось скачать ресурс ${url}: сетевая ошибка - ${error.message}`)
+        // Сетевая ошибка (нет соединения, таймаут)
+        throw new Error(`Failed to load resource ${url}: Network error - ${error.message}`)
+      }
+      else if (error.code === 'ENOENT') {
+        // Файловая ошибка - директория не существует
+        throw new Error(`Failed to save resource ${url}: Directory does not exist`)
+      }
+      else if (error.code === 'EACCES') {
+        // Файловая ошибка - нет прав
+        throw new Error(`Failed to save resource ${url}: Permission denied`)
       }
       else {
-        throw new Error(`Не удалось скачать ресурс ${url}: ${error.message}`)
+        // Другие ошибки
+        throw new Error(`Failed to load resource ${url}: ${error.message}`)
       }
     })
 }
