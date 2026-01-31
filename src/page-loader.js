@@ -14,7 +14,7 @@ const log = debug('page-loader')
 /**
  * Основная функция pageLoader с Listr
  */
-const pageLoader = (url, outputDir) => {
+const pageLoader = (url, outputDir = process.cwd()) => {
   const parseUrl = new URL(url)
   log('распарсенная ссылка', parseUrl)
 
@@ -22,11 +22,6 @@ const pageLoader = (url, outputDir) => {
   const filename = utils.generateName(url, '.html')
   const dirname = utils.generateName(url, '_files')
 
-  console.log(filename)
-
-  console.log(outputDir)
-
-  
   const filepath = path.resolve(outputDir, filename)
   const dirpath = path.resolve(outputDir, dirname)
 
