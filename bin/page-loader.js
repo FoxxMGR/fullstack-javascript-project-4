@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-undef */
+
 import { Command } from 'commander'
 import pageLoader from '../src/page-loader.js'
 

@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 import fsp from 'fs/promises'
 import path from 'path'
 import { URL } from 'url'
