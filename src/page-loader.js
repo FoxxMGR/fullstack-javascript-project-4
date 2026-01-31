@@ -1,5 +1,5 @@
+/* eslint-disable no-undef */
 import fsp from 'fs/promises'
-import global from 'globals'
 import path from 'path'
 import { URL } from 'url'
 import axios from 'axios'
@@ -9,8 +9,6 @@ import debug from 'debug'
 import * as utils from './utils.js'
 import * as downloader from './downloader.js'
 import * as htmlProcessor from './html-processor.js'
-
-const { process } = global
 
 const log = debug('page-loader')
 
