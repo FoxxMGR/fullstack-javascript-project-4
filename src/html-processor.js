@@ -1,8 +1,5 @@
 import * as cheerio from 'cheerio'
 import path from 'path'
-import debug from 'debug'
-
-const log = debug('page-loader:html-processor')
 
 /**
  * Собирает информацию о ресурсах из HTML
@@ -31,23 +28,19 @@ export const collectResources = ($, url, {
     })
   })
 
-  // Обработка тегов link (включая canonical и stylesheet)
+  // Обработка тегов link
   $('link').each((i, element) => {
     const href = $(element).attr('href')
     const rel = $(element).attr('rel')
 
     if (!href) return
 
-    // Обрабатываем ВСЕ локальные ссылки: canonical, stylesheet, и другие
     const resourceInfo = getResourceFilename(href, url)
     if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
 
     // Определяем тип ресурса
     let type = 'link'
-    if (rel === 'canonical') {
-      type = 'canonical'
-    }
-    else if (rel === 'stylesheet' || href.includes('.css')) {
+    if (rel === 'stylesheet' || href.includes('.css')) {
       type = 'css'
     }
 
@@ -86,7 +79,6 @@ export const collectResources = ($, url, {
  * Обновляет HTML с локальными путями
  */
 export const updateHtmlWithLocalPaths = ($, resources, dirname) => {
-  // Обновляем ВСЕ ресурсы одинаково
   resources.forEach((resource) => {
     const relativePath = path.join(dirname, resource.filename)
     $(resource.element).attr(resource.attribute, relativePath)
@@ -102,11 +94,8 @@ export const processHtml = (html, url, utils) => {
   const $ = cheerio.load(html)
   const { resources } = collectResources($, url, utils)
 
-  log(`Найдено ${resources.length} локальных ресурсов`)
-
   return {
     $,
     resources,
-    originalHtml: html,
   }
 }

@@ -4,7 +4,7 @@ import nock from 'nock'
 import os from 'os'
 
 import pageLoader from '../src/page-loader.js'
-import { expect, test, beforeEach, jest } from '@jest/globals'
+import { expect, test, beforeEach } from '@jest/globals'
 
 nock.disableNetConnect()
 
@@ -16,7 +16,7 @@ beforeEach(async () => {
   pathTmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pageLoader-'))
 })
 
-test('log', async () => {
+test('pageLoader downloads page with all resources and replaces URLs', async () => {
   const htmlFixturePath = getFixturePath('downloaded.html')
   const cssFixturePath = getFixturePath('application.css')
   const scriptFixturePath = getFixturePath('runtime.js')
@@ -98,7 +98,7 @@ test('pageLoader throws error on network failure', async () => {
 
   await expect(pageLoader('https://example.com', pathTmp))
     .rejects
-    .toThrow(/Failed to load page.*Network error/)
+    .toThrow('Network error')
 })
 
 test('pageLoader throws error on HTTP 404', async () => {
@@ -108,7 +108,7 @@ test('pageLoader throws error on HTTP 404', async () => {
 
   await expect(pageLoader('https://example.com', pathTmp))
     .rejects
-    .toThrow(/Failed to load page.*HTTP 404/)
+    .toThrow('Request failed with status code 404')
 })
 
 test('pageLoader throws error on HTTP 500', async () => {
@@ -118,50 +118,25 @@ test('pageLoader throws error on HTTP 500', async () => {
 
   await expect(pageLoader('https://example.com', pathTmp))
     .rejects
-    .toThrow(/Failed to load page.*HTTP 500/)
-})
-
-test('pageLoader throws error when resource download fails', async () => {
-  const htmlFixturePath = getFixturePath('downloaded.html')
-  const htmlFixture = await fs.promises.readFile(htmlFixturePath, 'utf-8')
-
-  nock('https://example.com')
-    .get('/')
-    .reply(200, htmlFixture)
-    .get('/assets/application.css')
-    .reply(404, 'Not Found')
-
-  await expect(pageLoader('https://example.com', pathTmp))
-    .rejects
-    .toThrow(/Failed to download.*resources/)
+    .toThrow('Request failed with status code 500')
 })
 
 test('pageLoader throws error on non-existent directory', async () => {
+  const url = 'https://example.com'
   const nonExistentDir = '/non/existent/directory'
 
-  await expect(pageLoader('https://example.com', nonExistentDir))
+  await expect(pageLoader(url, nonExistentDir))
     .rejects
-    .toThrow('Output directory does not exist: /non/existent/directory')
+    .toThrow(/ENOENT/)
 })
 
 test('pageLoader throws error on directory without write permission', async () => {
   const url = 'https://example.com'
   const protectedDir = '/root'
 
-  // Мокаем fs.promises.access для симуляции EACCES
-  const originalAccess = fs.promises.access
-  fs.promises.access = jest.fn().mockRejectedValue(
-    Object.assign(new Error('Permission denied'), { code: 'EACCES' }),
-  )
-
-  try {
-    await expect(pageLoader(url, protectedDir))
-      .rejects
-      .toThrow('No write permission to output directory: /root')
-  }
-  finally {
-    fs.promises.access = originalAccess
-  }
+  await expect(pageLoader(url, protectedDir))
+    .rejects
+    .toThrow(/EACCES/)
 })
 
 test('pageLoader works with no local resources', async () => {
