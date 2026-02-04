@@ -89,8 +89,8 @@ const pageLoader = (url, outputDir = process.cwd()) => {
       }))
 
       const tasks = new Listr(downloadTasks, {
-        concurrent: false,
-        exitOnError: true,
+        concurrent: true,
+        exitOnError: false,
         renderer: 'default',
       })
 

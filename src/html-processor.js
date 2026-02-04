@@ -10,65 +10,36 @@ export const collectResources = ($, url, {
 }) => {
   const resources = []
 
-  // Обработка тегов img
-  $('img').each((i, element) => {
-    const src = $(element).attr('src')
-    if (!src) return
+  const tagConfigs = [
+    {
+      selector: 'img',
+      attr: 'src',
+    },
+    {
+      selector: 'link',
+      attr: 'href',
+    },
+    {
+      selector: 'script',
+      attr: 'src',
+    },
+  ]
 
-    const resourceInfo = getResourceFilename(src, url)
-    if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
+  tagConfigs.forEach((config) => {
+    $(config.selector).each((_, element) => {
+      const attrValue = $(element).attr(config.attr)
+      if (!attrValue) return
 
-    resources.push({
-      element,
-      originalUrl: src,
-      url: resourceInfo.url,
-      filename: resourceInfo.filename,
-      type: 'image',
-      attribute: 'src',
-    })
-  })
+      const resourceInfo = getResourceFilename(attrValue, url)
+      if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
 
-  // Обработка тегов link
-  $('link').each((i, element) => {
-    const href = $(element).attr('href')
-    const rel = $(element).attr('rel')
-
-    if (!href) return
-
-    const resourceInfo = getResourceFilename(href, url)
-    if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
-
-    // Определяем тип ресурса
-    let type = 'link'
-    if (rel === 'stylesheet' || href.includes('.css')) {
-      type = 'css'
-    }
-
-    resources.push({
-      element,
-      originalUrl: href,
-      url: resourceInfo.url,
-      filename: resourceInfo.filename,
-      type,
-      attribute: 'href',
-    })
-  })
-
-  // Обработка тегов script
-  $('script').each((i, element) => {
-    const src = $(element).attr('src')
-    if (!src) return
-
-    const resourceInfo = getResourceFilename(src, url)
-    if (!resourceInfo || !isLocalResource(resourceInfo.url, url)) return
-
-    resources.push({
-      element,
-      originalUrl: src,
-      url: resourceInfo.url,
-      filename: resourceInfo.filename,
-      type: 'script',
-      attribute: 'src',
+      resources.push({
+        element,
+        originalUrl: attrValue,
+        url: resourceInfo.url,
+        filename: resourceInfo.filename,
+        attribute: config.attr,
+      })
     })
   })
 
